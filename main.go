@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 const jsonDataPath  = `C:\Users\tashr\Desktop\projects\golang\pratice\json\userData.json`
+const jsonPath = `C:\Users\tashr\Desktop\projects\golang\pratice\json`
 var reader = bufio.NewReader(os.Stdin)
 
 type OptionError struct {
@@ -23,8 +25,9 @@ type TaskList struct {
 
 type Task struct {
 	Name string `json:"taskName"`
-	ID   string `json:"taskId"`
+	ID   int `json:"taskId"`
 	Message string `json:"taskInfo"`
+	Completed bool `json:"Completed"`
 }
 
 var commandsMap = map[string]func(){
@@ -33,8 +36,11 @@ var commandsMap = map[string]func(){
 }
 
 func main() {
+	taskOptionsMessage()
+}
+
+func taskOptionsMessage(){
 	fmt.Println("Hello golang!")
-	openUserInfo()
 	fmt.Println("1. Create Task\n2. Delete Task")
 	fmt.Print("Enter choice: ")
 
@@ -76,18 +82,23 @@ func deleteUserInfo(){
 	}
 }
 
-func openUserInfo(){
-	done := make(chan bool)
-	// Checking for data from file
-	_, err := os.Stat(jsonDataPath)
+func getNumberOfFiles()(int){
+	filecount := 0
+	err := filepath.WalkDir(jsonPath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+		fmt.Println("Error checking directory")
+		return err
+		}
+		if !d.IsDir(){
+			filecount++
+		}
+		return nil
+	})
 	if err != nil {
-		go func() {
-			createUserJson()
-			done <- true
-		}()
-		<-done
+		fmt.Println(err) 
 	}
-	readFile()
+	fmt.Printf("Number of files: %d", filecount)
+	return filecount
 }
 
 func readFile(){
@@ -100,15 +111,6 @@ func readFile(){
 	if len(string(data)) == 0 {
 		fmt.Println("File is empty")
 	}
-}
-
-func createUserJson(){
-	file, createErr := os.Create(jsonDataPath)
-	if createErr != nil {
-		fmt.Println("Error creating file:", createErr)
-		return
-	}
-	file.Close()
 }
 
 func deleteTask() {
@@ -129,7 +131,7 @@ func getTaskName() string {
 
 func createTask() {
 	var (
-		taskId string
+		taskId int
 		taskInfo string
 	)
 
@@ -139,31 +141,48 @@ func createTask() {
 		return
 	}
 
-	taskId = fmt.Sprintf("%s.1", taskName)
-	var taskIdRemovedSpaces  = removeLineSpacing(taskId)
+	taskId = getNumberOfFiles()
 	taskInfo = addTaskInfo()
 	fmt.Println("[+] Task being created...")
 
-	defer formJsonStructure(taskName, taskIdRemovedSpaces, taskInfo)
+	defer formJsonStructure(taskName, taskId, taskInfo)
 }
 
-func formJsonStructure(taskName string, taskId string, taskInfo string){
+func formJsonStructure(taskName string, taskId int, taskInfo string){
 	task := Task{
 		Name: taskName,
 		ID:   taskId,
 		Message: taskInfo,
+		Completed: false,
 	}
-
-	saveAsJson(task)
+	saveJson(task, taskName)
 }
 
-func saveAsJson(task Task){
+func saveJson(task Task, taskName string){
 	jsonBytes, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		fmt.Println("Error marshalling task:", err)
 		return
 	}
 	fmt.Println("JSON data:\n", string(jsonBytes))
+	saveJsonData(jsonBytes, taskName)
+}
+
+func saveJsonData(jsonData []byte, taskName string){
+	jsonFilePath := fmt.Sprintf("%s\\%s.json", jsonPath, taskName)
+	fmt.Println(jsonFilePath)
+	file, readerr := os.OpenFile(jsonFilePath,os.O_CREATE, 0644)
+	if readerr != nil{
+		fmt.Println("Error reading user data")
+	}
+	saveTofile(jsonData, file)
+}
+
+func saveTofile(jsonData []byte, file *os.File){
+	_, wErr :=file.Write(jsonData)
+	if wErr != nil {
+		fmt.Println(wErr)
+	}
 }
 
 func addTaskInfo() string {
