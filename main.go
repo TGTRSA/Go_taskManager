@@ -9,8 +9,7 @@ import (
 	"strings"
 )
 
-const jsonDataPath  = `C:\Users\tashr\Desktop\projects\golang\pratice\json\userData.json`
-const jsonPath = `C:\Users\tashr\Desktop\projects\golang\pratice\json`
+const jsonPath = `C:\Users\tashr\Desktop\projects\golang\practice\json`
 var reader = bufio.NewReader(os.Stdin)
 
 type OptionError struct {
@@ -33,6 +32,7 @@ type Task struct {
 var commandsMap = map[string]func(){
 	"/taskCreate": createTask,
 	"/taskDelete": deleteTask,
+	"/listTasks": listTasks,
 }
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 
 func taskOptionsMessage(){
 	fmt.Println("Hello golang!")
-	fmt.Println("1. Create Task\n2. Delete Task")
+	fmt.Println("1. Create Task\n2. Delete Task\n3. List tasks currently in queue")
 	fmt.Print("Enter choice: ")
 
 	input, err := reader.ReadString('\n')
@@ -51,14 +51,16 @@ func taskOptionsMessage(){
 			main()
 		}
 	}
-
 	choice := strings.TrimSpace(input)
+
 
 	switch choice {
 	case "1":
 		commandsMap["/taskCreate"]()
 	case "2":
 		commandsMap["/taskDelete"]()
+	case "3":
+		commandsMap["/listTasks"]()
 	default:
 		fmt.Println("Invalid option")
 	}
@@ -74,7 +76,7 @@ func (e *OptionError) IsInvalidOption() bool {
 
 func deleteUserInfo(){
 	// Delete the file
-	removeErr := os.Remove(jsonDataPath)
+	removeErr := os.Remove("_")
 	if removeErr != nil {
 		fmt.Println("Error removing file:", removeErr)
 	} else {
@@ -101,8 +103,8 @@ func getNumberOfFiles()(int){
 	return filecount
 }
 
-func readFile(){
-	data, readErr := os.ReadFile(jsonDataPath)
+func readFile(file string){
+	data, readErr := os.ReadFile(file)
 	if readErr != nil {
 		fmt.Println("Error reading file:", readErr)
 		return
@@ -114,7 +116,12 @@ func readFile(){
 }
 
 func deleteTask() {
+	//var arrayPosition int
 	fmt.Println("[+] Deleting task...")
+}
+
+func getTaskId(task string){
+
 }
 
 func getTaskName() string {
@@ -130,6 +137,7 @@ func getTaskName() string {
 }
 
 func createTask() {
+	fmt.Println("[+] Creating task struct... ")
 	var (
 		taskId int
 		taskInfo string
@@ -159,6 +167,7 @@ func formJsonStructure(taskName string, taskId int, taskInfo string){
 }
 
 func saveJson(task Task, taskName string){
+	fmt.Println("[+] Creating json data")
 	jsonBytes, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		fmt.Println("Error marshalling task:", err)
@@ -168,8 +177,25 @@ func saveJson(task Task, taskName string){
 	saveJsonData(jsonBytes, taskName)
 }
 
+func listTasks()  {
+	fmt.Println("[+] Attemting to list tasks")
+	files,err:=os.ReadDir(jsonPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("List of tasks?? %s\n", files)
+	for i:=0; i< len(files);i++{
+		fmt.Printf("File %d: %s\n",i+1, files[i])
+	}
+}
+
+func completeTheTask(){
+
+}
+
 func saveJsonData(jsonData []byte, taskName string){
-	jsonFilePath := fmt.Sprintf("%s\\%s.json", jsonPath, taskName)
+	fmt.Println("[+] Saving to json... ")
+	jsonFilePath := fmt.Sprintf("%s\\%s.json", jsonPath, strings.ReplaceAll(taskName, " ", "_"))
 	fmt.Println(jsonFilePath)
 	file, readerr := os.OpenFile(jsonFilePath,os.O_CREATE, 0644)
 	if readerr != nil{
