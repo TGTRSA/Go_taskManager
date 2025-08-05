@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const jsonPath = `C:\Users\tashr\Desktop\projects\golang\practice\json`
+var jsonPath = `C:\Users\tashr\Desktop\projects\golang\practice\json`
 var reader = bufio.NewReader(os.Stdin)
 
 type OptionError struct {
@@ -32,8 +32,11 @@ type Task struct {
 var commandsMap = map[string]func(){
 	"/taskCreate": createTask,
 	"/taskDelete": deleteTask,
-	"/listTasks": listTasks,
+	"/listTasks": func() {
+		listTasks() // you can print or process here
+	},
 }
+
 
 func main() {
 	taskOptionsMessage()
@@ -74,16 +77,6 @@ func (e *OptionError) IsInvalidOption() bool {
 	return strings.Contains(e.msg, "invalid option")
 }
 
-func deleteUserInfo(){
-	// Delete the file
-	removeErr := os.Remove("_")
-	if removeErr != nil {
-		fmt.Println("Error removing file:", removeErr)
-	} else {
-		fmt.Println("Temporary file deleted.")
-	}
-}
-
 func getNumberOfFiles()(int){
 	filecount := 0
 	err := filepath.WalkDir(jsonPath, func(path string, d os.DirEntry, err error) error {
@@ -117,7 +110,28 @@ func readFile(file string){
 
 func deleteTask() {
 	//var arrayPosition int
-	fmt.Println("[+] Deleting task...")
+	//var fileMap = make(map[int]string)
+	var taskToDelete int
+	
+	fileMap := listTasks()
+	mapLength := len(fileMap)
+	for j:=1; j<=mapLength; j++ {
+		fmt.Printf("%d: %s\n",j,fileMap[j])
+	} 
+	fmt.Print("Which file would you like to delete? ")
+	fmt.Scanln(&taskToDelete)
+	fmt.Printf("[+] Deleting task... %s\n", fileMap[taskToDelete])
+
+	deleteFileData(fileMap[taskToDelete])
+}
+
+func deleteFileData(filePath string){
+	removeErr := os.Remove(filePath)
+	if removeErr != nil {
+		fmt.Println("Error removing file:", removeErr)
+	} else {
+		fmt.Println("File deleted.")
+	}
 }
 
 func getTaskId(task string){
@@ -177,17 +191,26 @@ func saveJson(task Task, taskName string){
 	saveJsonData(jsonBytes, taskName)
 }
 
-func listTasks()  {
-	fmt.Println("[+] Attemting to list tasks")
-	files,err:=os.ReadDir(jsonPath)
+func listTasks() map[int]string {
+	fileMap := make(map[int]string)
+
+	fmt.Println("[+] Attempting to list tasks")
+
+	files, err := os.ReadDir(jsonPath)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error reading directory:", err)
+		return fileMap // Return empty map on error
 	}
-	fmt.Printf("List of tasks?? %s\n", files)
-	for i:=0; i< len(files);i++{
-		fmt.Printf("File %d: %s\n",i+1, files[i])
+
+	// mapping the list of tasks to an index starting at 1
+	for index, file := range files {
+		fmt.Printf("File %d: %s\n", index+1, file.Name())
+		fileMap[index+1] = filepath.Join(jsonPath, file.Name())
 	}
+	fmt.Println(fileMap)
+	return fileMap
 }
+
 
 func completeTheTask(){
 
@@ -222,14 +245,4 @@ func addTaskInfo() string {
 	
 	taskInfo = strings.TrimSpace(input)
 	return taskInfo
-}
-
-func numberOfTasks() {
-
-}
-
-func removeLineSpacing(input string) string {
-    noNewLines := strings.ReplaceAll(input, "\r\n", "")
-    noNewLines = strings.ReplaceAll(noNewLines, "\n", "")
-    return noNewLines
 }
