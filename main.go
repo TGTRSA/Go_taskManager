@@ -35,6 +35,7 @@ var commandsMap = map[string]func(){
 	"/listTasks": func() {
 		listTasks() // you can print or process here
 	},
+	"/completeTask": completeTheTask,
 }
 
 
@@ -44,7 +45,7 @@ func main() {
 
 func taskOptionsMessage(){
 	fmt.Println("Hello golang!")
-	fmt.Println("1. Create Task\n2. Delete Task\n3. List tasks currently in queue")
+	fmt.Println("1. Create Task\n2. Delete Task\n3. List tasks currently in queue.\n4. Complete task")
 	fmt.Print("Enter choice: ")
 
 	input, err := reader.ReadString('\n')
@@ -64,6 +65,8 @@ func taskOptionsMessage(){
 		commandsMap["/taskDelete"]()
 	case "3":
 		commandsMap["/listTasks"]()
+	case "4":
+		commandsMap["/completeTask"]()
 	default:
 		fmt.Println("Invalid option")
 	}
@@ -211,9 +214,45 @@ func listTasks() map[int]string {
 	return fileMap
 }
 
+func viewTaskFiles() []os.DirEntry{
+	files, err := os.ReadDir(jsonPath)
+	if err != nil {
+		fmt.Println("Error reading directory:", err)
+	}
+	return files
+}
 
 func completeTheTask(){
-
+	var (
+		completedTask int
+	 	taskToComplete Task
+		jsonWriteErr error
+	)
+	taskMap := listTasks()
+	fmt.Println("[?] Which task should be marked as complete? ")
+	fmt.Scan(&completedTask)
+	taskFilePath := taskMap[completedTask]
+	file, fileError:= os.OpenFile(taskFilePath, os.O_WRONLY|os.O_TRUNC, 0666)
+	if fileError != nil{
+		fmt.Println(fileError)
+		return
+	}
+	defer file.Close()
+	err := json.NewDecoder(file).Decode(&taskToComplete)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	taskToComplete.Completed = true
+	fmt.Printf("[>>] %v is now complete", taskToComplete)
+	jsonBytes, jsonWriteErr := json.MarshalIndent(taskToComplete, "", " ")
+	if jsonWriteErr != nil{
+		fmt.Println(jsonWriteErr)
+	}
+	_, writeError:= file.Write(jsonBytes)
+	if writeError != nil {
+		fmt.Println(writeError)
+	}
 }
 
 func saveJsonData(jsonData []byte, taskName string){
