@@ -226,33 +226,33 @@ func completeTheTask(){
 	var (
 		completedTask int
 	 	taskToComplete Task
-		jsonWriteErr error
 	)
 	taskMap := listTasks()
 	fmt.Println("[?] Which task should be marked as complete? ")
 	fmt.Scan(&completedTask)
 	taskFilePath := taskMap[completedTask]
-	file, fileError:= os.OpenFile(taskFilePath, os.O_WRONLY|os.O_TRUNC, 0666)
-	if fileError != nil{
-		fmt.Println(fileError)
+	file, readErr := os.ReadFile(taskFilePath)
+	if readErr != nil {
+		fmt.Println(readErr)
+	}
+
+	if err := json.Unmarshal(file, &taskToComplete); err != nil {
+		fmt.Println("Error decoding JSON:", err)
 		return
 	}
-	defer file.Close()
-	err := json.NewDecoder(file).Decode(&taskToComplete)
+	fmt.Printf("[+] %v initially\n", taskToComplete)
+	taskToComplete.Completed = true
+	fmt.Printf("[<<+>>] %v\n", taskToComplete)
+	taskToComplete.saveChanges(taskFilePath)
+}
+
+func (task *Task) saveChanges(path string){
+	jsonBytes, err:= json.MarshalIndent(task, "", " ")
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	taskToComplete.Completed = true
-	fmt.Printf("[>>] %v is now complete", taskToComplete)
-	jsonBytes, jsonWriteErr := json.MarshalIndent(taskToComplete, "", " ")
-	if jsonWriteErr != nil{
-		fmt.Println(jsonWriteErr)
-	}
-	_, writeError:= file.Write(jsonBytes)
-	if writeError != nil {
-		fmt.Println(writeError)
-	}
+	os.WriteFile(path, jsonBytes, os.FileMode(os.O_WRONLY))
+
 }
 
 func saveJsonData(jsonData []byte, taskName string){
